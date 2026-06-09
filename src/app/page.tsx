@@ -23,7 +23,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-900/30">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-zinc-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-900/30">
             <ShieldCheck className="w-4 h-4" />
             GA & Finance System
           </div>

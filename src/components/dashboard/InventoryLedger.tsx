@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { 
@@ -22,6 +23,7 @@ const fetcher = (url: string) => fetch(url, {
 }).then((res) => res.json());
 
 export default function InventoryLedger() {
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -101,7 +103,17 @@ export default function InventoryLedger() {
           Inventory Ledger
         </h2>
 
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center justify-between md:hidden mb-4">
+          <button
+            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            className="flex items-center justify-center gap-2 px-4 py-2 w-full border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            <Filter className="w-4 h-4" />
+            {isFiltersOpen ? "Hide Filters" : "Show Filters"}
+          </button>
+        </div>
+
+        <div className={`${isFiltersOpen ? "flex" : "hidden"} md:flex flex-col md:flex-row gap-4 items-center justify-between`}>
           {/* Search Form */}
           <form onSubmit={handleSearch} className="relative w-full md:w-80">
             <input
@@ -179,31 +191,34 @@ export default function InventoryLedger() {
             No assets found matching the selected criteria.
           </div>
         ) : (
-          <table className="w-full text-sm text-left border-collapse">
-            <thead>
+          <table className="w-full text-sm text-left border-collapse block md:table">
+            <thead className="hidden md:table-header-group">
               <tr className="bg-zinc-50/70 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-medium">
                 <th className="px-6 py-4">Asset Code</th>
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Purchase Info</th>
+                <th className="hidden md:table-cell px-6 py-4">Purchase Info</th>
                 <th className="px-6 py-4">Site</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <tbody className="block md:table-row-group divide-y divide-zinc-200 dark:divide-zinc-800">
               {response.data.map((asset) => (
                 <tr 
                   key={asset.assetId} 
-                  className="bg-white dark:bg-zinc-900 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20 transition-colors"
+                  className="block md:table-row bg-white dark:bg-zinc-900 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20 transition-colors py-4 md:py-0"
                 >
-                  <td className="px-6 py-4 font-mono text-xs font-semibold text-zinc-950 dark:text-zinc-50">
+                  <td className="block md:table-cell px-6 py-2 md:py-4 font-mono text-xs font-semibold text-zinc-950 dark:text-zinc-50">
+                    <span className="md:hidden text-zinc-500 mr-2 font-normal">Code:</span>
                     {asset.assetTagCode}
                   </td>
-                  <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">
+                  <td className="block md:table-cell px-6 py-2 md:py-4 font-medium text-zinc-900 dark:text-zinc-100">
+                    <span className="md:hidden text-zinc-500 mr-2 font-normal">Name:</span>
                     {asset.assetName}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="block md:table-cell px-6 py-2 md:py-4">
                     <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+                      <span className="md:hidden text-zinc-500 mr-2 font-normal">Type:</span>
                       {asset.assetType === "vehicle" ? (
                         <>
                           <Truck className="w-3.5 h-3.5 text-zinc-400" />
@@ -217,10 +232,11 @@ export default function InventoryLedger() {
                       )}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="block md:table-cell px-6 py-2 md:py-4">
+                    <span className="md:hidden text-zinc-500 mr-2 font-normal">Status:</span>
                     {getStatusBadge(asset.status)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="hidden md:table-cell px-6 py-4">
                     <div className="text-xs space-y-0.5 text-zinc-600 dark:text-zinc-400">
                       <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
@@ -236,7 +252,8 @@ export default function InventoryLedger() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-xs">
+                  <td className="block md:table-cell px-6 py-2 md:py-4 text-xs border-t border-zinc-100 dark:border-zinc-800 md:border-0 mt-2 md:mt-0 pt-4 md:pt-4">
+                    <div className="md:hidden text-zinc-500 mb-1 font-normal">Site Location:</div>
                     <div className="font-semibold text-zinc-900 dark:text-zinc-100">
                       {asset.location?.siteName || "N/A"}
                     </div>
