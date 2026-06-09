@@ -1,5 +1,5 @@
 import { db } from './index';
-import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles } from './schema';
+import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles, statusChangeRequests } from './schema';
 import * as dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 dotenv.config({ path: '.env.local' });
@@ -9,6 +9,7 @@ async function main() {
 
   // 1. Clean existing records in reverse order
   console.log('🧹 Cleaning existing tables...');
+  await db.delete(statusChangeRequests);
   await db.delete(userRoles);
   await db.delete(rolePermissions);
   await db.delete(users);
@@ -21,6 +22,7 @@ async function main() {
   await db.delete(assets);
   await db.delete(costCenters);
   await db.delete(locations);
+
 
   // 2. Seed Locations
   console.log('📍 Seeding locations...');
@@ -44,9 +46,9 @@ async function main() {
 
   // 4. Seed Assets (we need 20+ assets: some appliances, some vehicles)
   console.log('📦 Seeding assets...');
-  
+
   const now = new Date();
-  
+
   // Let's create arrays of assets
   const appliancesAssets = [
     {
@@ -353,7 +355,7 @@ async function main() {
 
   // 6. Seed Vehicles Details
   console.log('🚗 Seeding vehicles details...');
-  
+
   // Expirations calculations
   const dateOffset = (days: number) => {
     const d = new Date();
@@ -530,7 +532,7 @@ async function main() {
 
   // 8. Seed Roles & Permissions
   console.log('🔑 Seeding roles and permissions...');
-  
+
   // Insert Permissions
   const permissionsData = [
     { name: 'create:asset', description: 'Create new assets' },
@@ -538,13 +540,13 @@ async function main() {
     { name: 'update:asset', description: 'Modify asset details' },
     { name: 'delete:asset', description: 'Delete assets' },
   ];
-  
+
   const insertedPermissions: { id: string; name: string; description: string | null }[] = [];
   for (const perm of permissionsData) {
     const [inserted] = await db.insert(permissions).values(perm).returning();
     insertedPermissions.push(inserted);
   }
-  
+
   const permMap = new Map(insertedPermissions.map(p => [p.name, p.id]));
 
   // Insert Roles
@@ -556,6 +558,8 @@ async function main() {
     { name: 'Division Head', description: 'View division assets' },
     { name: 'Department Head', description: 'View department assets' },
     { name: 'Employee', description: 'Standard employee access' },
+    { name: 'HRGA Head', description: 'HRGA department head' },
+    { name: 'Finance', description: 'Finance user' },
   ];
 
   const insertedRoles: { id: string; name: string; description: string | null }[] = [];
@@ -597,7 +601,7 @@ async function main() {
   });
 
   // Everyone else (Viewer, Division Head, Department Head, Employee) gets read
-  const readOnlyRoles = ['Viewer', 'Division Head', 'Department Head', 'Employee'];
+  const readOnlyRoles = ['Viewer', 'Division Head', 'Department Head', 'Employee', 'HRGA Head', 'Finance'];
   readOnlyRoles.forEach(rName => {
     rolePermissionValues.push({
       roleId: roleMap.get(rName)!,
@@ -621,6 +625,33 @@ async function main() {
     userId: adminUser.id,
     roleId: roleMap.get('System Admin')!,
   });
+
+  console.log('👤 Seeding HRGA Head user...');
+  const hrgaPasswordHash = bcrypt.hashSync('password123', 10);
+  const [hrgaUser] = await db.insert(users).values({
+    name: 'HRGA Head User',
+    email: 'hrga@example.com',
+    password: hrgaPasswordHash,
+  }).returning();
+
+  await db.insert(userRoles).values({
+    userId: hrgaUser.id,
+    roleId: roleMap.get('HRGA Head')!,
+  });
+
+  console.log('👤 Seeding Finance user...');
+  const financePasswordHash = bcrypt.hashSync('password123', 10);
+  const [financeUser] = await db.insert(users).values({
+    name: 'Finance User',
+    email: 'finance@example.com',
+    password: financePasswordHash,
+  }).returning();
+
+  await db.insert(userRoles).values({
+    userId: financeUser.id,
+    roleId: roleMap.get('Finance')!,
+  });
+
 
   console.log('✅ Seeding complete!');
   process.exit(0);

@@ -154,3 +154,21 @@ export const userRoles = pgTable("user_roles", {
 }, (t) => [
   primaryKey({ columns: [t.userId, t.roleId] }),
 ]);
+
+// Approval Workflow Tables
+export const approvalStatusEnum = pgEnum('approval_status_enum', ['pending_hrga', 'pending_finance', 'approved', 'rejected']);
+
+export const statusChangeRequests = pgTable('status_change_requests', {
+  requestId: uuid('request_id').defaultRandom().primaryKey(),
+  assetId: uuid('asset_id').references(() => assets.assetId, { onDelete: 'cascade' }).notNull(),
+  requestedStatus: assetStatusEnum('requested_status').notNull(),
+  reasonOrNotes: text('reason_or_notes').notNull(),
+  evidenceUrl: varchar('evidence_url'), // Link from Vercel Blob
+  estimatedCost: decimal('estimated_cost', { precision: 15, scale: 2 }), // Used for maintenance threshold logic
+  approvalStatus: approvalStatusEnum('approval_status').default('pending_hrga').notNull(),
+  hrgaReviewedBy: text('hrga_reviewed_by').references(() => users.id), // Foreign key for HRGA Head
+  financeReviewedBy: text('finance_reviewed_by').references(() => users.id), // Foreign key for Finance User
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+

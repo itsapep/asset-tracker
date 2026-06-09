@@ -1,8 +1,9 @@
 import { db } from './index';
-import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles } from './schema';
+import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles, statusChangeRequests } from './schema';
 
 export async function resetDatabase() {
   // Clean tables
+  await db.delete(statusChangeRequests);
   await db.delete(userRoles);
   await db.delete(rolePermissions);
   await db.delete(users);
