@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { 
   AlertTriangle, 
@@ -17,7 +19,17 @@ const fetcher = (url: string) => fetch(url, {
   }
 }).then((res) => res.json());
 
-export default function ComplianceCommandCenter() {
+function ComplianceCommandCenterContent() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const openAssetDetails = (assetId: string) => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("assetId", assetId);
+    router.push(pathname + "?" + nextParams.toString());
+  };
+
   const { data: expResponse, isLoading: expLoading } = useSWR<{
     success: boolean;
     data: ExpirationAlert[];
@@ -81,7 +93,8 @@ export default function ComplianceCommandCenter() {
             {expirations.map((alert) => (
               <div 
                 key={alert.vehicleId} 
-                className="flex flex-col p-4 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-950/20 rounded-lg transition-transform hover:scale-[1.01]"
+                onClick={() => openAssetDetails(alert.assetId)}
+                className="flex flex-col p-4 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-950/20 rounded-lg transition-transform hover:scale-[1.01] cursor-pointer"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -139,7 +152,8 @@ export default function ComplianceCommandCenter() {
             {maintenanceAssets.map((asset) => (
               <div 
                 key={asset.assetId} 
-                className="flex items-start justify-between p-4 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-950/20 rounded-lg transition-transform hover:scale-[1.01]"
+                onClick={() => openAssetDetails(asset.assetId)}
+                className="flex items-start justify-between p-4 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-950/20 rounded-lg transition-transform hover:scale-[1.01] cursor-pointer"
               >
                 <div>
                   <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5">
@@ -162,5 +176,18 @@ export default function ComplianceCommandCenter() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ComplianceCommandCenter() {
+  return (
+    <Suspense fallback={
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-pulse">
+        <div className="h-40 bg-zinc-100 dark:bg-zinc-800 rounded-xl"></div>
+        <div className="h-40 bg-zinc-100 dark:bg-zinc-800 rounded-xl"></div>
+      </div>
+    }>
+      <ComplianceCommandCenterContent />
+    </Suspense>
   );
 }

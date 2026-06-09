@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { 
@@ -19,7 +20,7 @@ const fetcher = (url: string) => fetch(url, {
   }
 }).then((res) => res.json());
 
-export default function AssetDetailsDrawer() {
+function AssetDetailsDrawerContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -317,5 +318,13 @@ export default function AssetDetailsDrawer() {
 
       </div>
     </div>
+  );
+}
+
+export default function AssetDetailsDrawer() {
+  return (
+    <Suspense fallback={null}>
+      <AssetDetailsDrawerContent />
+    </Suspense>
   );
 }
