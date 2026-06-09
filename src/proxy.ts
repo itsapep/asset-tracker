@@ -1,9 +1,27 @@
+import { auth } from "@/auth";
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export function proxy(request: NextRequest) {
+export const proxy = auth((request) => {
   const path = request.nextUrl.pathname;
+  const isLoggedIn = !!request.auth?.user;
 
+  console.log(`[Proxy] Path: ${path}, isLoggedIn: ${isLoggedIn}`);
+
+  // 1. Route protection: redirect unauthenticated users to /login
+  // Public routes: /login, API routes, or static files
+  const isPublicRoute = 
+    path === '/login' || 
+    path.startsWith('/api') || 
+    path.startsWith('/_next') || 
+    path === '/favicon.ico';
+
+  if (!isLoggedIn && !isPublicRoute) {
+    console.log(`[Proxy] Redirecting unauthenticated user to /login from ${path}`);
+    const loginUrl = new URL('/login', request.nextUrl.origin);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 2. Legacy/integration x-role header checks on API routes
   if (path.startsWith('/api/v1')) {
     const role = request.headers.get('x-role');
     const method = request.method;
@@ -41,8 +59,8 @@ export function proxy(request: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: '/api/v1/:path*',
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
