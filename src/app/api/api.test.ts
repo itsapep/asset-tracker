@@ -260,6 +260,72 @@ describe('Asset Management Tracking System API Tests', () => {
       assert.strictEqual(response.status, 403);
       assert.strictEqual(body.success, false);
     });
+
+    it('Scenario 10.1: Admin successfully updates vehicle nested details', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.vehicleAssetId}`, {
+        method: 'PATCH',
+        headers: { 'x-role': 'admin', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_name: "Updated Vehicle Name",
+          details: {
+            licensePlate: "B 9999 ZZZ",
+            make: "Toyota",
+            model: "Camry"
+          }
+        }),
+      });
+
+      const response = await patchAsset(req, { params: Promise.resolve({ id: ids.vehicleAssetId }) });
+      const body = await response.json();
+
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(body.success, true);
+
+      // Verify the details in the DB
+      const getReq = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.vehicleAssetId}`, {
+        headers: { 'x-role': 'reader' },
+      });
+      const getRes = await getAssetById(getReq, { params: Promise.resolve({ id: ids.vehicleAssetId }) });
+      const getBody = await getRes.json();
+      assert.strictEqual(getBody.data.assetName, "Updated Vehicle Name");
+      assert.strictEqual(getBody.data.details.licensePlate, "B 9999 ZZZ");
+      assert.strictEqual(getBody.data.details.make, "Toyota");
+      assert.strictEqual(getBody.data.details.model, "Camry");
+    });
+
+    it('Scenario 10.2: Admin successfully updates appliance nested details', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.applianceAssetId}`, {
+        method: 'PATCH',
+        headers: { 'x-role': 'admin', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_name: "Updated Appliance Name",
+          details: {
+            brand: "LG",
+            modelNumber: "OLED65",
+            serialNumber: "SN-LG-OLED-65",
+            powerRatingWatts: 150
+          }
+        }),
+      });
+
+      const response = await patchAsset(req, { params: Promise.resolve({ id: ids.applianceAssetId }) });
+      const body = await response.json();
+
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(body.success, true);
+
+      // Verify details in DB
+      const getReq = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.applianceAssetId}`, {
+        headers: { 'x-role': 'reader' },
+      });
+      const getRes = await getAssetById(getReq, { params: Promise.resolve({ id: ids.applianceAssetId }) });
+      const getBody = await getRes.json();
+      assert.strictEqual(getBody.data.assetName, "Updated Appliance Name");
+      assert.strictEqual(getBody.data.details.brand, "LG");
+      assert.strictEqual(getBody.data.details.modelNumber, "OLED65");
+      assert.strictEqual(getBody.data.details.serialNumber, "SN-LG-OLED-65");
+      assert.strictEqual(getBody.data.details.powerRatingWatts, 150);
+    });
   });
 
   describe('DELETE /api/v1/assets/[id]', () => {
