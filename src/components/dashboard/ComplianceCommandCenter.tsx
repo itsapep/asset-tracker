@@ -4,7 +4,6 @@ import useSWR from "swr";
 import { 
   AlertTriangle, 
   ShieldAlert, 
-  Calendar, 
   Wrench, 
   CheckCircle,
   Truck,
@@ -19,12 +18,12 @@ const fetcher = (url: string) => fetch(url, {
 }).then((res) => res.json());
 
 export default function ComplianceCommandCenter() {
-  const { data: expResponse, error: expError, isLoading: expLoading } = useSWR<{
+  const { data: expResponse, isLoading: expLoading } = useSWR<{
     success: boolean;
     data: ExpirationAlert[];
   }>("/api/v1/compliance/upcoming-expirations?days=30", fetcher);
 
-  const { data: maintResponse, error: maintError, isLoading: maintLoading } = useSWR<{
+  const { data: maintResponse, isLoading: maintLoading } = useSWR<{
     success: boolean;
     data: Asset[];
   }>("/api/v1/assets?status=under_maintenance&limit=50", fetcher);
