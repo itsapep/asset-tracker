@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { assets, officeAppliances, vehicles } from '@/db/schema';
+import { assets, officeAppliances, vehicles, locations } from '@/db/schema';
 import { eq, and, isNull, like, or, sql, SQL } from 'drizzle-orm';
 
 // GET /api/v1/assets
@@ -52,15 +52,17 @@ export async function GET(request: NextRequest) {
       .from(assets)
       .leftJoin(officeAppliances, eq(assets.assetId, officeAppliances.assetId))
       .leftJoin(vehicles, eq(assets.assetId, vehicles.assetId))
+      .leftJoin(locations, eq(assets.locationId, locations.locationId))
       .where(whereClause)
       .limit(limit)
       .offset(offset);
 
     // Format output data nicely
     const data = records.map((record) => {
-      const { assets: asset, office_appliances: appliance, vehicles: vehicle } = record;
+      const { assets: asset, office_appliances: appliance, vehicles: vehicle, locations: location } = record;
       return {
         ...asset,
+        location,
         details: asset.assetType === 'appliance' ? appliance : vehicle,
       };
     });
