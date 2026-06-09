@@ -15,6 +15,7 @@ import {
   RefreshCw 
 } from "lucide-react";
 import { Asset } from "@/types/dashboard";
+import AssetDetailsDrawer from "./AssetDetailsDrawer";
 
 const fetcher = (url: string) => fetch(url, {
   headers: {
@@ -56,8 +57,8 @@ export default function InventoryLedger() {
   const updateFilters = (updates: Record<string, string | null>) => {
     const nextParams = new URLSearchParams(searchParams.toString());
     
-    // Reset page to 1 on any filter change
-    if (!updates.hasOwnProperty("page")) {
+    // Reset page to 1 on any filter change, except when opening/closing the drawer
+    if (!updates.hasOwnProperty("page") && !updates.hasOwnProperty("assetId")) {
       nextParams.set("page", "1");
     }
 
@@ -206,7 +207,8 @@ export default function InventoryLedger() {
               {response.data.map((asset) => (
                 <tr 
                   key={asset.assetId} 
-                  className="block md:table-row bg-white dark:bg-zinc-900 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20 transition-colors py-4 md:py-0"
+                  onClick={() => updateFilters({ assetId: asset.assetId })}
+                  className="block md:table-row bg-white dark:bg-zinc-900 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20 transition-colors py-4 md:py-0 cursor-pointer"
                 >
                   <td className="block md:table-cell px-6 py-2 md:py-4 font-mono text-xs font-semibold text-zinc-950 dark:text-zinc-50">
                     <span className="md:hidden text-zinc-500 mr-2 font-normal">Code:</span>
@@ -295,6 +297,7 @@ export default function InventoryLedger() {
           </div>
         </div>
       )}
+      <AssetDetailsDrawer />
     </div>
   );
 }

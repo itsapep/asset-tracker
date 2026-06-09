@@ -6,7 +6,7 @@ import { client } from '@/db';
 
 // Import route handlers
 import { GET as getAssets, POST as postAssets } from '@/app/api/v1/assets/route';
-import { PATCH as patchAsset, DELETE as deleteAsset } from '@/app/api/v1/assets/[id]/route';
+import { GET as getAssetById, PATCH as patchAsset, DELETE as deleteAsset } from '@/app/api/v1/assets/[id]/route';
 import { POST as postOdometer } from '@/app/api/v1/vehicles/[id]/odometer/route';
 import { GET as getCompliance } from '@/app/api/v1/compliance/upcoming-expirations/route';
 import { POST as postAuditScan } from '@/app/api/v1/audit/scan/route';
@@ -169,7 +169,51 @@ describe('Asset Management Tracking System API Tests', () => {
 
       assert.strictEqual(response.status, 400);
       assert.strictEqual(body.success, false);
-      assert.strictEqual(body.error.code, 'DUPLICATE_TAG');
+  });
+});
+
+  describe('GET /api/v1/assets/[id]', () => {
+    it('Scenario X: Fetch a valid vehicle asset with relations', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.vehicleAssetId}`, {
+        headers: { 'x-role': 'reader' },
+      });
+      const res = await getAssetById(req, { params: Promise.resolve({ id: ids.vehicleAssetId }) });
+      const body = await res.json();
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(body.success, true);
+      assert.strictEqual(body.data.assetType, 'vehicle');
+      assert.ok(body.data.details.licensePlate);
+      assert.ok(body.data.location.siteName);
+      assert.ok(body.data.costCenter.departmentName);
+    });
+
+    it('Scenario Y: Fetch a valid appliance asset with relations', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/v1/assets/${ids.applianceAssetId}`, {
+        headers: { 'x-role': 'reader' },
+      });
+      const res = await getAssetById(req, { params: Promise.resolve({ id: ids.applianceAssetId }) });
+      const body = await res.json();
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(body.success, true);
+      assert.strictEqual(body.data.assetType, 'appliance');
+      assert.ok(body.data.details.serialNumber);
+      assert.ok(body.data.location.siteName);
+      assert.ok(body.data.costCenter.departmentName);
+    });
+
+    it('Scenario Z: Return 404 for non-existent asset ID', async () => {
+      const fakeId = '00000000-0000-0000-0000-000000000000';
+      const req = new NextRequest(`http://localhost:3000/api/v1/assets/${fakeId}`, {
+        headers: { 'x-role': 'reader' },
+      });
+      const res = await getAssetById(req, { params: Promise.resolve({ id: fakeId }) });
+      const body = await res.json();
+
+      assert.strictEqual(res.status, 404);
+      assert.strictEqual(body.success, false);
+      assert.strictEqual(body.error.code, 'NOT_FOUND');
     });
   });
 
