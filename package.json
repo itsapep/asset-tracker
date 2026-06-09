@@ -8,12 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx src/db/seed.ts",
-    "test": "npx tsx --test src/app/api/api.test.ts tests/components/EditAssetModal.test.tsx"
+    "test": "npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts tests/components/EditAssetModal.test.tsx"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.2",
+    "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
+    "next-auth": "^5.0.0-beta.31",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/qrcode": "^1.5.6",
