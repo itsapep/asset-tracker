@@ -1,105 +1,37 @@
-# Authentication and RBAC UI Handler Implementation
+# User Profile Header Dropdown
 
-This plan outlines the architecture and step-by-step implementation for handling authentication and Role-Based Access Control (RBAC) in the UI layer of the Next.js application.
-
-This document is detailed specifically to guide a junior engineer or an AI agent to execute the implementation with zero ambiguity.
-
-## User Review Required
-
-> [!IMPORTANT]  
-> Please review this highly detailed plan. It includes specific file paths, configuration strings, and component props to ensure the implementation is foolproof.
+This plan details the implementation of a dynamic user profile dropdown to replace the static "GA & Finance System" pill in the header. It will display the logged-in user's name and primary role, and provide an option to log out.
 
 ## Proposed Changes
 
-### Phase 1: Configuration & Routing Protection
+### NextAuth & Components
 
-#### [NEW] `src/middleware.ts`
-**Objective:** Protect all application routes and redirect unauthenticated users to `/login`.
-**Implementation Details:**
-- Import `NextAuth` and the existing configuration from `src/auth.config.ts`.
-- Export the `auth` middleware from NextAuth.
-- Add a Next.js `config` object with a `matcher` array that EXCLUDES specific public paths:
-  - `matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login).*)"]`
-- Ensure that the `login` route is explicitly excluded so unauthenticated users can actually reach the login page without entering an infinite redirect loop.
+#### [NEW] UserDropdown.tsx (src/components/layout/UserDropdown.tsx)
+- Create a new Client Component to handle dropdown state and user interactions.
+- Accept the `user` object from the NextAuth session as a prop.
+- Render the current emerald-themed pill containing the user's name and primary role (e.g., `John Doe (Admin)`).
+- Implement a simple Tailwind CSS dropdown menu that toggles on click.
+- Inside the dropdown, display the user's email for extra context, followed by a "Log out" button.
+- The "Log out" button will invoke `signOut({ callbackUrl: '/login' })` imported from `next-auth/react`.
 
-### Phase 2: Providers & Layout
-
-#### [NEW] `src/components/providers/session-provider.tsx`
-**Objective:** Provide NextAuth session context to all client components.
-**Implementation Details:**
-- Must include the `"use client";` directive at the top of the file.
-- Import `SessionProvider` from `next-auth/react`.
-- Create a wrapper component `AppSessionProvider` that accepts `children: React.ReactNode` and wraps them in `<SessionProvider>{children}</SessionProvider>`.
-
-#### [MODIFY] `src/app/layout.tsx`
-**Objective:** Integrate the `AppSessionProvider` into the application root layout.
-**Implementation Details:**
-- Import `AppSessionProvider` from `src/components/providers/session-provider.tsx`.
-- Wrap the main application `{children}` inside the `<body>` tag with `<AppSessionProvider>`.
-- Note: Keep `layout.tsx` as a Server Component.
-
-### Phase 3: Client-Side Hooks & UI Components
-
-#### [NEW] `src/lib/hooks/use-permissions.ts`
-**Objective:** Provide a convenient client-side hook for checking permissions and roles.
-**Implementation Details:**
-- Must include `"use client";`.
-- Use the `useSession` hook from `next-auth/react`.
-- Extract `roles` and `permissions` from `session.data?.user` (Note: the types are configured in `src/types/next-auth.d.ts` and populated in `auth.config.ts`).
-- Export an object containing:
-  - `hasPermission(permission: string): boolean`
-  - `hasAnyPermission(permissions: string[]): boolean`
-  - `hasRole(role: string): boolean`
-  - `isLoading: boolean` (derived from `session.status === "loading"`)
-
-#### [NEW] `src/components/auth/RequirePermission.tsx`
-**Objective:** A reusable wrapper component to conditionally hide UI elements (buttons, links, sections) from unauthorized users.
-**Implementation Details:**
-- Must include `"use client";`.
-- **Props:**
-  - `permissions: string | string[]`
-  - `requireAll?: boolean` (default: false)
-  - `fallback?: React.ReactNode` (default: null)
-  - `children: React.ReactNode`
-- **Logic:**
-  - Call the `usePermissions()` hook.
-  - While `isLoading` is true, either return `null` or a minimal skeleton.
-  - Check if the user meets the permission requirements.
-  - If authorized, return `children`.
-  - If unauthorized, return the `fallback` prop.
-
-### Phase 4: Login Page
-
-#### [NEW] `src/app/login/page.tsx`
-**Objective:** A beautiful, premium split-screen login page matching modern design aesthetics.
-**Implementation Details:**
-- **Layout Approach (Tailwind CSS):**
-  - Use a full-screen grid: `min-h-screen grid grid-cols-1 lg:grid-cols-2`.
-  - **Left Side (Branding):** 
-    - A visually striking, premium background (e.g., gradient, abstract pattern, or high-quality image placeholder).
-    - Display the application logo and a catchy subtitle.
-    - Hidden on mobile devices (`hidden lg:flex`).
-  - **Right Side (Form):**
-    - A centered, sleek card-like form area.
-    - Minimalist typography (Inter/Geist fonts).
-- **Form Functionality:**
-  - Must be a client component (`"use client";`) or utilize a client-side form component to handle state.
-  - Includes standard `email` and `password` inputs with proper HTML validation and accessible labels.
-  - **Submit Logic:** Prevent default form submission and call NextAuth's `signIn('credentials', { email, password, redirect: false })`.
-  - Handle the response:
-    - If `res?.error`, display a styled error toast or inline message (e.g., "Invalid credentials").
-    - If successful, redirect the user to the dashboard `/` using Next.js `useRouter` or `window.location`.
+#### [MODIFY] page.tsx (src/app/page.tsx)
+- Import the `auth` function from `src/auth.ts`.
+- Make the `AdminDashboard` component `async` if it isn't already, and call `await auth()` to retrieve the current session.
+- Pass `session?.user` to the new `<UserDropdown>` component.
+- Replace the existing static `<div className="... bg-emerald-50 ..."> GA & Finance System </div>` markup with the new `<UserDropdown user={session?.user} />` component.
 
 ## Verification Plan
 
 ### Automated Tests
-- No new E2E tests are explicitly required for this phase unless requested, but ensure existing `dashboard.spec.ts` passes.
-- (Optional) Write a unit test for `RequirePermission.tsx` mocking `useSession`.
+- Create a test file `tests/components/UserDropdown.test.tsx` (or similar depending on testing framework like Jest/React Testing Library) to verify the `<UserDropdown>` component.
+- The test will verify:
+  - The user's name and role are rendered correctly when provided.
+  - The dropdown opens when clicked, revealing the user's email.
+  - Clicking the "Log out" button correctly invokes the `signOut` function with the correct arguments.
 
 ### Manual Verification
-1. Open a private browsing window.
-2. Navigate to `http://localhost:3000/`.
-3. Verify that the Next.js middleware intercepts the request and redirects to `http://localhost:3000/login`.
-4. Enter invalid credentials and observe the error handling UI.
-5. Enter valid credentials (e.g., `admin@example.com` and `password123`) and verify successful authentication and redirection back to the dashboard.
-6. Verify that `RequirePermission` successfully hides and shows elements based on the current user's role.
+1. Open `http://localhost:3000/`.
+2. Verify that the header pill now dynamically shows the logged-in user's name and role instead of "GA & Finance System".
+3. Click the pill to ensure the dropdown menu opens smoothly and displays the user's email and a logout button.
+4. Click the "Log out" button.
+5. Verify that the application successfully logs out the user and redirects to the `/login` page.

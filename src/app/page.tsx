@@ -1,9 +1,13 @@
 import { Suspense } from 'react';
 import ComplianceCommandCenter from '@/components/dashboard/ComplianceCommandCenter';
 import InventoryLedger from '@/components/dashboard/InventoryLedger';
-import { LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
+import { auth } from '@/auth';
+import UserDropdown from '@/components/layout/UserDropdown';
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const session = await auth();
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-50 font-sans">
       {/* Top Premium Navbar */}
@@ -23,9 +27,8 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-zinc-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-900/30">
-            <ShieldCheck className="w-4 h-4" />
-            GA & Finance System
+          <div className="hidden sm:flex items-center">
+            <UserDropdown user={session?.user} />
           </div>
         </div>
       </header>
