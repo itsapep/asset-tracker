@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { 
   X, 
   Truck, 
@@ -13,6 +13,7 @@ import {
   Calendar, 
   Clock 
 } from "lucide-react";
+import EditAssetModal from "./EditAssetModal";
 
 const fetcher = (url: string) => fetch(url, {
   headers: {
@@ -24,8 +25,10 @@ function AssetDetailsDrawerContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   
   const assetId = searchParams.get("assetId");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data: response, error, isLoading } = useSWR<{
     success: boolean;
@@ -309,7 +312,7 @@ function AssetDetailsDrawerContent() {
             Close Panel
           </button>
           <button 
-            disabled
+            onClick={() => setIsEditModalOpen(true)}
             className="flex-1 py-2 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
           >
             Edit Asset
@@ -317,6 +320,15 @@ function AssetDetailsDrawerContent() {
         </div>
 
       </div>
+
+      {isEditModalOpen && asset && (
+        <EditAssetModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          asset={asset}
+          onSuccess={() => mutate(`/api/v1/assets/${assetId}`)}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx src/db/seed.ts",
-    "test": "npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts tests/components/UserDropdown.test.tsx"
+    "test": "npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts tests/components/EditAssetModal.test.tsx tests/components/UserDropdown.test.tsx"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",

@@ -174,6 +174,36 @@ export async function PATCH(
       .where(eq(assets.assetId, id))
       .returning();
 
+    if (body.details !== undefined && body.details !== null) {
+      if (existingAsset.assetType === 'vehicle') {
+        const vehicleUpdate: Partial<typeof vehicles.$inferInsert> = {};
+        if (body.details.licensePlate !== undefined) vehicleUpdate.licensePlate = body.details.licensePlate;
+        if (body.details.vinNumber !== undefined) vehicleUpdate.vinNumber = body.details.vinNumber;
+        if (body.details.engineNumber !== undefined) vehicleUpdate.engineNumber = body.details.engineNumber;
+        if (body.details.make !== undefined) vehicleUpdate.make = body.details.make;
+        if (body.details.model !== undefined) vehicleUpdate.model = body.details.model;
+        if (body.details.manufactureYear !== undefined) vehicleUpdate.manufactureYear = body.details.manufactureYear;
+        if (body.details.fuelType !== undefined) vehicleUpdate.fuelType = body.details.fuelType;
+        if (body.details.currentOdometer !== undefined) vehicleUpdate.currentOdometer = body.details.currentOdometer;
+        if (body.details.registrationExpiry !== undefined) vehicleUpdate.registrationExpiry = body.details.registrationExpiry;
+        if (body.details.safetyInspectionExpiry !== undefined) vehicleUpdate.safetyInspectionExpiry = body.details.safetyInspectionExpiry;
+        if (body.details.insurancePolicyNo !== undefined) vehicleUpdate.insurancePolicyNo = body.details.insurancePolicyNo;
+        if (body.details.insuranceExpiry !== undefined) vehicleUpdate.insuranceExpiry = body.details.insuranceExpiry;
+
+        await db.update(vehicles).set(vehicleUpdate).where(eq(vehicles.assetId, id));
+      } else if (existingAsset.assetType === 'appliance') {
+        const applianceUpdate: Partial<typeof officeAppliances.$inferInsert> = {};
+        if (body.details.brand !== undefined) applianceUpdate.brand = body.details.brand;
+        if (body.details.modelNumber !== undefined) applianceUpdate.modelNumber = body.details.modelNumber;
+        if (body.details.serialNumber !== undefined) applianceUpdate.serialNumber = body.details.serialNumber;
+        if (body.details.powerRatingWatts !== undefined) applianceUpdate.powerRatingWatts = body.details.powerRatingWatts;
+        if (body.details.isBulk !== undefined) applianceUpdate.isBulk = body.details.isBulk;
+        if (body.details.quantity !== undefined) applianceUpdate.quantity = body.details.quantity;
+
+        await db.update(officeAppliances).set(applianceUpdate).where(eq(officeAppliances.assetId, id));
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: updatedAsset,
