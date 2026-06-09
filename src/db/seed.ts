@@ -1,6 +1,7 @@
 import { db } from './index';
-import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs } from './schema';
+import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles } from './schema';
 import * as dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 dotenv.config({ path: '.env.local' });
 
 async function main() {
@@ -8,6 +9,11 @@ async function main() {
 
   // 1. Clean existing records in reverse order
   console.log('🧹 Cleaning existing tables...');
+  await db.delete(userRoles);
+  await db.delete(rolePermissions);
+  await db.delete(users);
+  await db.delete(roles);
+  await db.delete(permissions);
   await db.delete(discrepancyLogs);
   await db.delete(odometerLogs);
   await db.delete(officeAppliances);
@@ -521,6 +527,100 @@ async function main() {
     { vehicleId: createdVehicles[1].vehicleId, oldReading: 15000, newReading: 18000, recordedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
   ];
   await db.insert(odometerLogs).values(odometerLogsData);
+
+  // 8. Seed Roles & Permissions
+  console.log('🔑 Seeding roles and permissions...');
+  
+  // Insert Permissions
+  const permissionsData = [
+    { name: 'create:asset', description: 'Create new assets' },
+    { name: 'read:asset', description: 'Read asset details' },
+    { name: 'update:asset', description: 'Modify asset details' },
+    { name: 'delete:asset', description: 'Delete assets' },
+  ];
+  
+  const insertedPermissions: { id: string; name: string; description: string | null }[] = [];
+  for (const perm of permissionsData) {
+    const [inserted] = await db.insert(permissions).values(perm).returning();
+    insertedPermissions.push(inserted);
+  }
+  
+  const permMap = new Map(insertedPermissions.map(p => [p.name, p.id]));
+
+  // Insert Roles
+  const rolesData = [
+    { name: 'System Admin', description: 'Full system control' },
+    { name: 'Asset Manager', description: 'Manage assets and details' },
+    { name: 'Technician', description: 'Maintain and update assets' },
+    { name: 'Viewer', description: 'View assets only' },
+    { name: 'Division Head', description: 'View division assets' },
+    { name: 'Department Head', description: 'View department assets' },
+    { name: 'Employee', description: 'Standard employee access' },
+  ];
+
+  const insertedRoles: { id: string; name: string; description: string | null }[] = [];
+  for (const r of rolesData) {
+    const [inserted] = await db.insert(roles).values(r).returning();
+    insertedRoles.push(inserted);
+  }
+
+  const roleMap = new Map(insertedRoles.map(r => [r.name, r.id]));
+
+  // Map Permissions to Roles
+  console.log('🔗 Mapping permissions to roles...');
+  const rolePermissionValues: { roleId: string; permissionId: string }[] = [];
+
+  // System Admin gets all permissions
+  insertedPermissions.forEach(p => {
+    rolePermissionValues.push({
+      roleId: roleMap.get('System Admin')!,
+      permissionId: p.id,
+    });
+  });
+
+  // Asset Manager gets create, read, update
+  const managerPerms = ['create:asset', 'read:asset', 'update:asset'];
+  managerPerms.forEach(pName => {
+    rolePermissionValues.push({
+      roleId: roleMap.get('Asset Manager')!,
+      permissionId: permMap.get(pName)!,
+    });
+  });
+
+  // Technician gets read, update
+  const techPerms = ['read:asset', 'update:asset'];
+  techPerms.forEach(pName => {
+    rolePermissionValues.push({
+      roleId: roleMap.get('Technician')!,
+      permissionId: permMap.get(pName)!,
+    });
+  });
+
+  // Everyone else (Viewer, Division Head, Department Head, Employee) gets read
+  const readOnlyRoles = ['Viewer', 'Division Head', 'Department Head', 'Employee'];
+  readOnlyRoles.forEach(rName => {
+    rolePermissionValues.push({
+      roleId: roleMap.get(rName)!,
+      permissionId: permMap.get('read:asset')!,
+    });
+  });
+
+  await db.insert(rolePermissions).values(rolePermissionValues);
+
+  // 9. Seed Default Admin User
+  console.log('👤 Seeding default admin user...');
+  const adminPasswordHash = bcrypt.hashSync('password123', 10);
+  const [adminUser] = await db.insert(users).values({
+    name: 'System Admin',
+    email: 'admin@example.com',
+    password: adminPasswordHash,
+  }).returning();
+
+  // Assign System Admin role to admin user
+  await db.insert(userRoles).values({
+    userId: adminUser.id,
+    roleId: roleMap.get('System Admin')!,
+  });
 
   console.log('✅ Seeding complete!');
   process.exit(0);
