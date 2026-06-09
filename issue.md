@@ -1,173 +1,209 @@
-# Implementation Plan: Asset Management Tracking System
+# Implementation Plan: QR Code Generation & Print Layout
 
-## 🎯 Overview
-This document outlines the step-by-step implementation plan to build an enterprise-grade, location-centric Asset Management Tracking System. The system addresses operational leakages by providing real-time tracking of assets, strict relational integrity via PostgreSQL, and location-based auditing.
+This document outlines the detailed, step-by-step implementation plan for generating dynamic QR codes for asset tags and creating a printable sheet layout optimized for Avery 5160 labels. It is designed to be highly actionable for a junior engineer or an AI agent.
 
-### Tech Stack
-- **Framework:** Next.js (App Router Route Handlers)
-- **Database ORM:** Drizzle ORM
-- **Database:** PostgreSQL
-- **Language:** TypeScript
+## Background Context
+To track assets effectively, each physical asset requires a printed tag containing a scannable QR code that links back to the digital record. The user needs a utility to generate these QR codes dynamically, as well as a frontend page that generates a printable sheet of these tags formatted for standard label sheets (Avery 5160). 
+
+*Decision Note:* The QR code must encode the full URL to the asset's detail page (e.g., `https://domain.com/assets/[tag_code]`), rather than just the raw tag code.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Company Logo:** A generic placeholder logo is currently planned for the labels. If a specific company logo asset exists (e.g., `/logo.svg`), please specify it.
+> - **Environment Variable:** Ensure `NEXT_PUBLIC_APP_URL` is set in your `.env*` to correctly construct the QR Code URLs.
+
+## Proposed Changes
 
 ---
 
-## 🏗️ Phase 1: Project Setup & Initialization
+### Component 1: Dependencies Setup
+Install the necessary library to generate SVG QR codes.
 
-### Task 1.1: Initialize Next.js Project
-1. Bootstrap a new Next.js project using App Router, TypeScript, and Tailwind CSS.
-   ```bash
-   npx create-next-app@latest asset-tracker --typescript --tailwind --eslint --app
-   cd asset-tracker
+#### [MODIFY] package.json
+Run the following commands in the terminal to add the required dependencies:
+```bash
+npm install qrcode
+npm install -D @types/qrcode
+```
+
+---
+
+### Component 2: QR Code Utility Function
+Create a shared utility function that takes an asset tag code, constructs the full URL, and generates an SVG QR code.
+
+#### [NEW] src/lib/qrcode.ts
+**Implementation Details:**
+1. Import `qrcode`.
+2. Define and export `async function generateAssetQRCode(assetTagCode: string): Promise<string>`.
+3. Read the base URL from the environment: `const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';`
+4. Construct the full URL: `const assetUrl = \`${baseUrl}/assets/${assetTagCode}\`;`
+5. Generate the SVG string: 
+   ```typescript
+   const svgString = await qrcode.toString(assetUrl, {
+       type: 'svg',
+       margin: 1, // Keep padding tight for small labels
+       color: {
+           dark: '#000000',
+           light: '#ffffff'
+       }
+   });
+   return svgString;
    ```
-2. Install database dependencies:
-   ```bash
-   npm install drizzle-orm postgres
-   npm install -D drizzle-kit @types/pg dotenv
+
+---
+
+### Component 3: Print Page Route
+Create a Next.js App Router Page that acts as the printable sheet. This page will accept query parameters to filter which assets to print.
+
+#### [NEW] src/app/print/tags/page.tsx
+**Implementation Details:**
+1. Create a React Server Component. 
+2. Retrieve `searchParams` from the component props. Note: If using Next.js 15+, `searchParams` is a Promise and must be `await`ed:
+   ```typescript
+   type Props = { searchParams: Promise<{ ids?: string; status?: string }> };
+   export default async function PrintTagsPage(props: Props) {
+       const params = await props.searchParams;
+       // ...
+   }
    ```
-
-### Task 1.2: Environment Configuration
-1. Create a `.env.local` file with the following database connection string:
-   ```env
-   DATABASE_URL=postgresql://user:password@localhost:5432/asset_tracker
+3. Parse the parameters:
+   - If `params.ids` is provided, split it by commas.
+   - If `params.status` is provided, use it for filtering.
+4. Query the database using Drizzle ORM:
+   ```typescript
+   import { db } from '@/db';
+   import { assets } from '@/db/schema';
+   import { inArray, eq, and, isNull } from 'drizzle-orm';
+   
+   // Base condition: exclude soft-deleted items
+   const conditions = [isNull(assets.deletedAt)];
+   
+   if (params.ids) {
+       const idArray = params.ids.split(',');
+       conditions.push(inArray(assets.id, idArray)); // Adjust 'assets.id' to match your schema's primary key (e.g., assets.assetId)
+   }
+   if (params.status) {
+       conditions.push(eq(assets.status, params.status));
+   }
+   
+   const matchingAssets = await db.select().from(assets).where(and(...conditions));
    ```
+5. Map over `matchingAssets` to generate the QR codes using `generateAssetQRCode`. You can do this concurrently with `Promise.all`.
+6. Render the UI:
+   - Apply a wrapper `div` with the class `.label-sheet`.
+   - Map over the assets and render each within a `.label` div.
+   - Inside the `.label`, display:
+     - Left side: A tiny placeholder logo + the `asset.assetName` (truncated if too long) + the `asset.assetTagCode`.
+     - Right side: Render the SVG string directly using `dangerouslySetInnerHTML={{ __html: qrCodeSvg }}`.
 
 ---
 
-## 🗄️ Phase 2: Database Schema (Drizzle ORM)
+### Component 4: Print Layout Styling
+Define the exact CSS needed to align with Avery 5160 labels (30 labels per page, 3 columns x 10 rows on US Letter paper).
 
-Create the following database schema using Drizzle ORM. Ensure that **soft deletions** (`deleted_at`) are implemented for core entities to preserve historical records.
+#### [NEW] src/app/print/tags/print.css
+**Implementation Details:**
+Create this file and import it into `page.tsx`. Use the exact CSS below to ensure accurate physical dimensions:
 
-### Task 2.1: Enums & Shared Fields
-1. Define PostgreSQL Enums in Drizzle:
-   - `asset_type_enum`: 'appliance', 'vehicle'
-   - `asset_status_enum`: 'active', 'idle', 'under_maintenance', 'disposed'
-   - `fuel_type_enum`: 'gasoline', 'diesel', 'electric', 'hybrid'
+```css
+/* Print-specific layout */
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in 0.19in; /* Avery 5160 top/bottom and left/right margins */
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: white;
+  }
 
-### Task 2.2: Master Supporting Tables
-1. **`locations` Table**:
-   - `location_id` (PK, varchar)
-   - `site_name` (varchar)
-   - `floor` (varchar)
-   - `room_or_section` (varchar)
-2. **`cost_centers` Table**:
-   - `cost_center_id` (PK, varchar)
-   - `department_name` (varchar)
-   - `division` (varchar)
+  /* Hide Next.js dev overlays or main app navigation/headers */
+  header, footer, nav, .no-print {
+    display: none !important;
+  }
+}
 
-### Task 2.3: Core `assets` Table
-1. Define the `assets` table:
-   - `asset_id` (PK, uuid, default random)
-   - `asset_tag_code` (varchar, unique)
-   - `asset_type` (enum)
-   - `asset_name` (varchar, not null)
-   - `status` (enum, not null)
-   - `location_id` (varchar, FK to `locations.location_id`)
-   - `cost_center_id` (varchar, FK to `cost_centers.cost_center_id`)
-   - `purchase_date` (date)
-   - `purchase_cost` (decimal(15,2))
-   - `vendor_name` (varchar)
-   - `warranty_expiry` (date, nullable)
-   - `created_at` (timestamp, default now)
-   - `updated_at` (timestamp, default now)
-   - `deleted_at` (timestamp, nullable) - **Crucial for soft deletes**
+/* Grid Layout for Avery 5160 */
+.label-sheet {
+  display: grid;
+  grid-template-columns: repeat(3, 2.625in); /* 3 columns, each 2.625" wide */
+  grid-auto-rows: 1in; /* Each label is 1" tall */
+  gap: 0 0.125in; /* No vertical gap, 0.125" horizontal gap between columns */
+  width: 8.125in; /* Total width: 3*2.625 + 2*0.125 */
+  margin: 0 auto;
+}
 
-### Task 2.4: Specialized Child Tables (1:1 Relationship)
-1. **`office_appliances` Table**:
-   - `appliance_id` (PK, uuid)
-   - `asset_id` (uuid, FK to `assets.asset_id`)
-   - `brand` (varchar)
-   - `model_number` (varchar)
-   - `serial_number` (varchar, unique)
-   - `power_rating_watts` (int, nullable)
-   - `is_bulk` (boolean, default false)
-   - `quantity` (int, default 1)
-2. **`vehicles` Table**:
-   - `vehicle_id` (PK, uuid)
-   - `asset_id` (uuid, FK to `assets.asset_id`)
-   - `license_plate` (varchar, unique, not null)
-   - `vin_number` (varchar, unique)
-   - `engine_number` (varchar, unique)
-   - `make` (varchar)
-   - `model` (varchar)
-   - `manufacture_year` (int)
-   - `fuel_type` (enum)
-   - `current_odometer` (int, not null)
-   - `registration_expiry` (date, not null)
-   - `safety_inspection_expiry` (date, nullable)
-   - `insurance_policy_no` (varchar)
-   - `insurance_expiry` (date)
+/* Individual Label Container */
+.label {
+  width: 2.625in;
+  height: 1in;
+  box-sizing: border-box;
+  padding: 0.05in 0.1in; /* Inner padding so content doesn't bleed off */
+  page-break-inside: avoid;
+  break-inside: avoid;
+  
+  /* Layout contents inside the label */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 1px dashed #ccc; /* Helpful for debugging visually, remove before final print or wrap in @media screen */
+}
 
-### Task 2.5: Audit & Operations Logs
-1. **`odometer_logs` Table**: Records changes when odometer is updated.
-2. **`discrepancy_logs` Table**: Records mismatched locations during field audits.
+@media print {
+  .label {
+    border: none; /* Hide debug borders when actually printing */
+  }
+}
 
----
+/* Label Content Typography */
+.label-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 65%;
+}
 
-## 🌱 Phase 3: Database Seeder
+.label-title {
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-Create a robust seeder script (`seed.ts`) to populate the database with realistic mock data.
+.label-code {
+  font-size: 8px;
+  color: #333;
+  font-family: monospace;
+}
 
-### Task 3.1: Seeder Script Setup
-1. Create a seeder file that uses Drizzle to connect and insert data.
-2. Provide a command in `package.json` to run the seeder: `"db:seed": "tsx seed.ts"`
+/* QR Code Container */
+.label-qr {
+  width: 0.8in;
+  height: 0.8in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-### Task 3.2: Generate Mock Data
-You can use manual arrays or mock libraries (like `@faker-js/faker`) to generate:
-1. **Locations:** `LOC-JKT-HQ-03` ("Jakarta Head Office", "Floor 3", "Meeting Room Alpha"), etc.
-2. **Cost Centers:** `CC-HR-001` ("Human Resources"), `CC-ADM-102` ("General Affairs"), etc.
-3. **Assets:** Seed 20+ base assets with varied statuses.
-4. **Child Records:** Link office appliances (TVs, Projectors) and vehicles (Vans, Executive Cars) to the seeded assets. Ensure unique constraints are respected.
+.label-qr svg {
+  width: 100%;
+  height: 100%;
+}
+```
 
----
+## Verification Plan
 
-## 🔐 Phase 4: Middleware & Soft Deletes
+### Automated Tests
+- Run `npm run build` or `npm run dev` to ensure no TypeScript compilation errors occur with the new Next.js route and `qrcode` library.
 
-### Task 4.1: RBAC Middleware
-1. Create a `middleware.ts` file in the Next.js root.
-2. Implement header-based or token-based interception:
-   - **Admin / GA Reader**: Allow only `GET` methods.
-   - **Admin / GA Editor**: Allow `GET`, `POST`, `PATCH`, `PUT`.
-   - **Super Admin / Finance**: Allow all methods, including operations that re-assign `cost_center_id` or change `deleted_at`.
-
-### Task 4.2: Soft Delete Architecture
-1. **NEVER** use SQL `DELETE` for assets.
-2. For any "delete" endpoint, execute an `UPDATE` to set `deleted_at = NOW()` and `status = 'disposed'`.
-3. In all `GET` queries (listing assets), strictly append `.where(isNull(assets.deletedAt))` in Drizzle.
-
----
-
-## 📡 Phase 5: API Endpoints Implementation
-
-Use Next.js Route Handlers (`app/api/.../route.ts`). All responses MUST follow:
-- **Success:** `{ "success": true, "data": [...] }`
-- **Error:** `{ "success": false, "error": { "code": "...", "message": "..." } }`
-
-### Task 5.1: Core Asset Management
-1. `POST /api/v1/assets`
-   - **Action:** Onboard new asset. Handle Drizzle database transactions to insert into `assets` AND the respective child table (`office_appliances` or `vehicles`).
-   - **Validation:** Check `asset_tag_code` uniqueness. `purchase_date` <= today.
-2. `GET /api/v1/assets`
-   - **Action:** List assets with server-side pagination (`page`, `limit`), filtering (`type`, `location_id`, `status`), and partial text search on `asset_name` or `asset_tag_code`. Exclude soft-deleted items.
-3. `PATCH /api/v1/assets/[id]`
-   - **Action:** Update specific attributes (e.g., `status`, `location_id`).
-
-### Task 5.2: Vehicle Operations & Compliance
-1. `POST /api/v1/vehicles/[id]/odometer`
-   - **Action:** Read current odometer. Validate `new_odometer_reading > current_odometer`. Update `vehicles` table and insert log into `odometer_logs`.
-2. `GET /api/v1/compliance/upcoming-expirations`
-   - **Action:** Fetch vehicles where `registration_expiry`, `safety_inspection_expiry`, or `insurance_expiry` is within the `days_threshold` (default 30 days).
-
-### Task 5.3: Location-Based Auditing
-1. `POST /api/v1/audit/scan`
-   - **Action:** Take `scanned_tag_code` and `actual_location_id`.
-   - **Logic Flow:** Look up asset. If `location_id` matches `actual_location_id`, return `{ status: "MATCH" }`.
-   - If mismatched, do NOT update `assets` table. Insert into `discrepancy_logs` and return `{ status: "MISMATCH", original_location: {...} }`.
-
----
-
-## ✅ Phase 6: Testing & Verification
-1. Verify database migrations run cleanly (`drizzle-kit push` or `migrate`).
-2. Run the seeder and manually inspect the PostgreSQL tables.
-3. Test all API endpoints using Postman or cURL to ensure standard JSON response structure.
-4. Attempt a soft delete and verify the record disappears from `GET /api/v1/assets` but remains in the DB.
-5. Attempt auditing a mismatched location and verify `discrepancy_logs` is populated.
+### Manual Verification
+1. Open the browser and navigate to the newly created route: `http://localhost:3000/print/tags?status=active`.
+2. Inspect the screen output. You should see a dashed grid representing the Avery 5160 labels.
+3. Open the browser's Print Dialog (`Ctrl+P` / `Cmd+P`).
+4. Ensure the paper size is set to **Letter (8.5 x 11)**, margins are set to **Default** or **None** (since `@page` handles them), and scale is **100%**.
+5. Verify the preview perfectly aligns with 30 labels per page (10 rows, 3 columns).
+6. Scan one of the QR codes from the screen using a mobile phone to confirm it correctly links to the full URL (e.g., `https://.../assets/AST-1234`).
