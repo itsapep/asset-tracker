@@ -26,7 +26,7 @@ export async function POST(
     }
 
     // Try finding the vehicle by either vehicleId or assetId
-    let [vehicle] = await db
+    const [vehicle] = await db
       .select()
       .from(vehicles)
       .where(or(eq(vehicles.vehicleId, id), eq(vehicles.assetId, id)))
@@ -82,13 +82,14 @@ export async function POST(
       success: true,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }

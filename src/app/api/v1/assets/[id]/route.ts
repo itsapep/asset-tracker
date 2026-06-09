@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { assets } from '@/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 // PATCH /api/v1/assets/[id]
 export async function PATCH(
@@ -78,7 +78,7 @@ export async function PATCH(
     }
 
     // Update object building
-    const updateData: any = {};
+    const updateData: Partial<typeof assets.$inferInsert> = {};
     if (body.asset_name !== undefined) updateData.assetName = body.asset_name;
     if (body.status !== undefined) {
       updateData.status = body.status;
@@ -109,13 +109,14 @@ export async function PATCH(
       success: true,
       data: updatedAsset,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }
@@ -180,13 +181,14 @@ export async function DELETE(
       success: true,
       data: deletedAsset,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }

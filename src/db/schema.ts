@@ -1,5 +1,4 @@
 import { pgTable, pgEnum, uuid, varchar, integer, decimal, timestamp, boolean, date } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 // Enums
 export const assetTypeEnum = pgEnum('asset_type_enum', ['appliance', 'vehicle']);

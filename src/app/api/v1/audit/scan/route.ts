@@ -74,13 +74,14 @@ export async function POST(request: NextRequest) {
         original_location: expectedLocation,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { assets, officeAppliances, vehicles } from '@/db/schema';
-import { eq, and, isNull, like, or, sql } from 'drizzle-orm';
+import { eq, and, isNull, like, or, sql, SQL } from 'drizzle-orm';
 
 // GET /api/v1/assets
 export async function GET(request: NextRequest) {
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
 
     const type = searchParams.get('type') as 'appliance' | 'vehicle' | null;
     const locationId = searchParams.get('location_id');
-    const status = searchParams.get('status') as any;
+    const status = searchParams.get('status') as "active" | "idle" | "under_maintenance" | "disposed" | null;
     const q = searchParams.get('q');
 
-    const conditions: any[] = [isNull(assets.deletedAt)];
+    const conditions: SQL[] = [isNull(assets.deletedAt)];
 
     if (type) {
       conditions.push(eq(assets.assetType, type));
@@ -30,8 +30,9 @@ export async function GET(request: NextRequest) {
     if (q) {
       const nameLike = like(assets.assetName, `%${q}%`);
       const tagLike = like(assets.assetTagCode, `%${q}%`);
-      if (nameLike && tagLike) {
-        conditions.push(or(nameLike, tagLike));
+      const orCondition = or(nameLike, tagLike);
+      if (orCondition) {
+        conditions.push(orCondition);
       }
     }
 
@@ -74,13 +75,14 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }
@@ -91,7 +93,6 @@ export async function GET(request: NextRequest) {
 // POST /api/v1/assets
 export async function POST(request: NextRequest) {
   try {
-    const role = request.headers.get('x-role');
     const body = await request.json();
 
     const {
@@ -314,13 +315,14 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result,
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }

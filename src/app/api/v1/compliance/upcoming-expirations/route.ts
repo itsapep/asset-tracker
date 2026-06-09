@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const days = parseInt(searchParams.get('days') || '30', 10);
 
-    const todayStr = new Date().toISOString().split('T')[0];
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + days);
     const maxDateStr = maxDate.toISOString().split('T')[0];
@@ -59,13 +58,14 @@ export async function GET(request: NextRequest) {
       success: true,
       data: formattedData,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'An unexpected error occurred',
+          message: errorMessage,
         },
       },
       { status: 500 }
