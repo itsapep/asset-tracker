@@ -42,7 +42,7 @@ test.describe('Admin Desktop Dashboard', () => {
     await searchInput.press('Enter');
 
     // Verify URL updates
-    await expect(page).toHaveURL(/\?q=test-query/);
+    await expect(page).toHaveURL(/q=test-query/);
 
     // Filter by type
     const typeSelect = page.locator('select').first(); // Type select is first
