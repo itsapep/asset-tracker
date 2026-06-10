@@ -52,6 +52,7 @@ jobs:
     - name: Run Playwright E2E Tests
       env:
         DATABASE_URL: 'postgres://user:password@localhost:5432/db'
+        RUN_MIGRATIONS: 'true'
       run: |
         npm run db:migrate
         npm run db:seed
