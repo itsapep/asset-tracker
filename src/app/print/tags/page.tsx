@@ -23,7 +23,7 @@ export default async function PrintTagsPage(props: Props) {
     const matchingAssets = await db.select().from(assets).where(and(...conditions));
 
     const assetsWithQRCodes = await Promise.all(
-        matchingAssets.map(async (asset) => {
+        matchingAssets.map(async (asset: any) => {
             const qrCodeSvg = await generateAssetQRCode(asset.assetTagCode);
             return {
                 ...asset,

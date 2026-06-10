@@ -72,7 +72,7 @@ export async function PATCH(
         let updatedRequest;
 
         if (skipFinance) {
-          await db.transaction(async (tx) => {
+          await db.transaction(async (tx: any) => {
             [updatedRequest] = await tx
               .update(statusChangeRequests)
               .set({
@@ -139,7 +139,7 @@ export async function PATCH(
 
       if (action === 'approve') {
         let updatedRequest;
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           [updatedRequest] = await tx
             .update(statusChangeRequests)
             .set({

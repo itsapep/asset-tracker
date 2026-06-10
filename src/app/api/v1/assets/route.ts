@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // Format output data nicely
-    const data = records.map((record) => {
+    const data = records.map((record: any) => {
       const { assets: asset, office_appliances: appliance, vehicles: vehicle, locations: location } = record;
       return {
         ...asset,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert using transaction
-    const result = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx: any) => {
       const [newAsset] = await tx
         .insert(assets)
         .values({

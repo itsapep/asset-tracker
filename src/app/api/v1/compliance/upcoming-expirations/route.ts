@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    const formattedData = records.map(({ vehicle, asset }) => {
+    const formattedData = records.map(({ vehicle, asset }: any) => {
       // Find out which specific items are expiring
       const expiringItems: string[] = [];
       if (vehicle.registrationExpiry && vehicle.registrationExpiry <= maxDateStr) {

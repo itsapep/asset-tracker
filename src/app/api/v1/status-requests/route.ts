@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       .innerJoin(assets, eq(statusChangeRequests.assetId, assets.assetId));
 
     const results = await query;
-    const mapped = results.map((r) => ({
+    const mapped = results.map((r: any) => ({
       ...r.request,
       asset: r.asset,
     }));

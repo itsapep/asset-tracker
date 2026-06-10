@@ -60,7 +60,7 @@ export async function POST(
     }
 
     // Transaction to update vehicle and log the change
-    const result = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx: any) => {
       // 1. Update vehicle table
       const [updatedVehicle] = await tx
         .update(vehicles)

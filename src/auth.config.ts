@@ -50,7 +50,7 @@ export default {
         const roleSet = new Set<string>();
         const permissionSet = new Set<string>();
         
-        userRolesResult.forEach(row => {
+        userRolesResult.forEach((row: any) => {
           if (row.roleName) roleSet.add(row.roleName);
           if (row.permissionName) permissionSet.add(row.permissionName);
         });
