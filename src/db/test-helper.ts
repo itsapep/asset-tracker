@@ -1,7 +1,15 @@
 import { db } from './index';
 import { locations, costCenters, assets, officeAppliances, vehicles, odometerLogs, discrepancyLogs, users, roles, permissions, rolePermissions, userRoles, statusChangeRequests } from './schema';
 
+let isMigrated = false;
+
 export async function resetDatabase() {
+  if (process.env.MOCK_DB === 'true' && !isMigrated) {
+    const { setupMockDb } = require('./mock-db');
+    await setupMockDb();
+    isMigrated = true;
+  }
+
   // Clean tables
   await db.delete(statusChangeRequests);
   await db.delete(userRoles);
