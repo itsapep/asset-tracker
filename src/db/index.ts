@@ -16,9 +16,9 @@ if (process.env.MOCK_DB === 'true') {
   client = mockDb.client;
   db = mockDb.db;
 } else {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!connectionString) {
-    throw new Error('DATABASE_URL is not set in environment variables');
+    throw new Error('DATABASE_URL or POSTGRES_URL is not set in environment variables');
   }
   client = postgres(connectionString);
   db = drizzle(client, { schema });
