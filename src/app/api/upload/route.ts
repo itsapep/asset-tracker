@@ -1,6 +1,5 @@
+import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 
 export async function POST(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
@@ -11,24 +10,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const bytes = await request.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // ignore
-    }
-
-    // make unique filename and clean it
-    const uniqueFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const path = join(uploadDir, uniqueFilename);
-    
-    await writeFile(path, buffer);
-
-    return NextResponse.json({ url: `/uploads/${uniqueFilename}` });
+    const blob = await put(filename, request.body, {
+      access: 'public',
+    });
+    // Returns the URL of the uploaded file
+    return NextResponse.json(blob);
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });

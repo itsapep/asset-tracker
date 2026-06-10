@@ -68,7 +68,13 @@ export async function PATCH(
       }
 
       if (action === 'approve') {
-        const skipFinance = requestRecord.requestedStatus === 'idle';
+        const [asset] = await db
+          .select()
+          .from(assets)
+          .where(eq(assets.assetId, requestRecord.assetId))
+          .limit(1);
+
+        const skipFinance = requestRecord.requestedStatus === 'idle' || (asset?.status === 'idle' && requestRecord.requestedStatus === 'active');
         let updatedRequest;
 
         if (skipFinance) {
@@ -108,7 +114,7 @@ export async function PATCH(
         return NextResponse.json({
           success: true,
           message: skipFinance
-            ? 'Approved by HRGA Head. Asset status updated to Idle successfully.'
+            ? `Approved by HRGA Head. Asset status updated to ${requestRecord.requestedStatus} successfully.`
             : 'Approved by HRGA Head, pending Finance',
           data: updatedRequest,
         });
