@@ -5,6 +5,7 @@ import * as schema from './schema';
 
 export const client = new PGlite();
 // Compatibility layer for tests calling client.end()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (client as any).end = async () => {
   await client.close();
 };

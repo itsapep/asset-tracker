@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // Format output data nicely
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = records.map((record: any) => {
       const { assets: asset, office_appliances: appliance, vehicles: vehicle, locations: location } = record;
       return {
@@ -255,6 +256,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert using transaction
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await db.transaction(async (tx: any) => {
       const [newAsset] = await tx
         .insert(assets)

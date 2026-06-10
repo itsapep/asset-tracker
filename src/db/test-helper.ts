@@ -5,6 +5,7 @@ let isMigrated = false;
 
 export async function resetDatabase() {
   if (process.env.MOCK_DB === 'true' && !isMigrated) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { setupMockDb } = require('./mock-db');
     await setupMockDb();
     isMigrated = true;

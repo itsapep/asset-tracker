@@ -34,6 +34,7 @@ function AssetDetailsDrawerContent() {
 
   const { data: response, error, isLoading } = useSWR<{
     success: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
   }>(assetId ? `/api/v1/assets/${assetId}` : null, fetcher);
 

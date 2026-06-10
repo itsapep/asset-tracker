@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 interface EditAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   asset: any;
   onSuccess: () => void;
 }
@@ -47,6 +48,7 @@ export default function EditAssetModal({ isOpen, onClose, asset, onSuccess }: Ed
     setIsSaving(true);
     setErrorMsg("");
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const details: Record<string, any> = {};
     if (asset.assetType === "vehicle") {
       details.licensePlate = licensePlate;
@@ -94,6 +96,7 @@ export default function EditAssetModal({ isOpen, onClose, asset, onSuccess }: Ed
 
       onSuccess();
       onClose();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setErrorMsg(err.message || "An unexpected error occurred");
     } finally {
