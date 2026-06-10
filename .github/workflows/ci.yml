@@ -53,6 +53,7 @@ jobs:
       env:
         DATABASE_URL: 'postgres://user:password@localhost:5432/db'
         RUN_MIGRATIONS: 'true'
+        AUTH_SECRET: 'dummy-secret-for-ci-testing-purposes-only-1234567890'
       run: |
         npm run db:migrate
         npm run db:seed
