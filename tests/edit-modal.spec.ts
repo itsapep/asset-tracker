@@ -1,6 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Edit Asset Modal Integration Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('#email', 'admin@example.com');
+    await page.fill('#password', 'password123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('/');
+  });
+
   test('should open the edit asset modal, verify layout, and update an asset successfully', async ({ page }) => {
     // 1. Navigate to the dashboard
     await page.goto('/');
