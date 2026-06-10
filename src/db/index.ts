@@ -5,10 +5,13 @@ import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let client: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any;
 
 if (process.env.MOCK_DB === 'true') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mockDb = require('./mock-db');
   client = mockDb.client;
   db = mockDb.db;

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import EditAssetModal from "./EditAssetModal";
 import StatusChangeModal from "./StatusChangeModal";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 const fetcher = (url: string) => fetch(url, {
   headers: {
@@ -31,9 +32,12 @@ function AssetDetailsDrawerContent() {
   const assetId = searchParams.get("assetId");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const { hasRole } = usePermissions();
+  const isFinanceOnly = hasRole('Finance') && !hasRole('System Admin');
 
   const { data: response, error, isLoading } = useSWR<{
     success: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
   }>(assetId ? `/api/v1/assets/${assetId}` : null, fetcher);
 
@@ -308,21 +312,24 @@ function AssetDetailsDrawerContent() {
 
         {/* Footer Actions */}
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2 bg-zinc-50/50 dark:bg-zinc-900/50">
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setIsStatusModalOpen(true)}
-              disabled={asset?.status === 'disposed'}
-              className="flex-1 py-2 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50"
-            >
-              Request Status
-            </button>
-            <button 
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex-1 py-2 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
-            >
-              Edit Asset
-            </button>
-          </div>
+          {!isFinanceOnly && (
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsStatusModalOpen(true)}
+                disabled={asset?.status === 'disposed' || asset?.hasPendingRequest}
+                title={asset?.hasPendingRequest ? "There is already a pending status request for this asset" : ""}
+                className="flex-1 py-2 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {asset?.hasPendingRequest ? 'Status Pending' : 'Request Status'}
+              </button>
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex-1 py-2 px-4 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                Edit Asset
+              </button>
+            </div>
+          )}
           <button 
             onClick={closeDrawer}
             className="w-full py-2 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400"

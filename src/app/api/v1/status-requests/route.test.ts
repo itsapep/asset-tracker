@@ -24,6 +24,7 @@ describe('Status Change Requests API Tests', () => {
     ]);
 
     // Default mock session as admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).mockAuthSession = {
       user: {
         id: 'user-admin-id',
@@ -36,6 +37,7 @@ describe('Status Change Requests API Tests', () => {
   });
 
   after(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).mockAuthSession;
     await client.end();
   });
@@ -105,6 +107,7 @@ describe('Status Change Requests API Tests', () => {
     assert.strictEqual(postBody.data.approvalStatus, 'pending_hrga');
 
     // 2. HRGA Head approves
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).mockAuthSession = {
       user: {
         id: 'hrga-user-id',
@@ -126,6 +129,7 @@ describe('Status Change Requests API Tests', () => {
     assert.strictEqual(hrgaBody.data.approvalStatus, 'pending_finance');
 
     // 3. Finance User approves
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).mockAuthSession = {
       user: {
         id: 'finance-user-id',
@@ -169,6 +173,7 @@ describe('Status Change Requests API Tests', () => {
     const requestId = postBody.data.requestId;
 
     // 2. Finance User tries to approve HRGA step (forbidden)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).mockAuthSession = {
       user: {
         id: 'finance-user-id',
@@ -207,6 +212,7 @@ describe('Status Change Requests API Tests', () => {
     assert.strictEqual(postBody.data.approvalStatus, 'pending_hrga');
 
     // 2. HRGA Head approves
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).mockAuthSession = {
       user: {
         id: 'hrga-user-id',

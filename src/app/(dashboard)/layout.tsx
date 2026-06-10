@@ -1,8 +1,9 @@
 import { Suspense } from 'react';
-import { LayoutDashboard, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/auth';
 import UserDropdown from '@/components/layout/UserDropdown';
+import ApprovalsLink from '@/components/layout/ApprovalsLink';
 import { Toaster } from 'sonner';
 
 export default async function DashboardLayout({
@@ -11,10 +12,6 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  
-  const isApprover = session?.user?.roles?.some((role: string) =>
-    ['System Admin', 'Finance', 'HRGA Head'].includes(role)
-  );
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-50 font-sans flex flex-col">
@@ -36,15 +33,7 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-4">
-            {isApprover && (
-              <Link
-                href="/approvals"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-zinc-800"
-              >
-                <ClipboardCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Approvals</span>
-              </Link>
-            )}
+            <ApprovalsLink user={session?.user} />
             <div className="hidden sm:flex items-center">
               <UserDropdown user={session?.user} />
             </div>

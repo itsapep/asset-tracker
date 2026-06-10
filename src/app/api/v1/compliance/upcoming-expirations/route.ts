@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    const formattedData = records.map(({ vehicle, asset }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formattedData = records.map(({ vehicle, asset }: any) => {
       // Find out which specific items are expiring
       const expiringItems: string[] = [];
       if (vehicle.registrationExpiry && vehicle.registrationExpiry <= maxDateStr) {

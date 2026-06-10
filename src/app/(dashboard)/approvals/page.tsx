@@ -77,6 +77,7 @@ export default function ApprovalsPage() {
       }
       toast.success(data.message || 'Request updated successfully', { id: toastId });
       mutate();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       toast.error(err.message || 'An error occurred', { id: toastId });
     } finally {

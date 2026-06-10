@@ -1,0 +1,60 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: TypeScript Compile Check
+      run: npx tsc --noEmit
+      
+    - name: ESLint Check
+      run: npm run lint
+      
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+      
+    - name: Run Unit Tests
+      run: npm run test
+      
+    - name: Run Playwright E2E Tests
+      env:
+        DATABASE_URL: 'postgres://user:password@localhost:5432/db'
+        RUN_MIGRATIONS: 'true'
+        AUTH_SECRET: 'dummy-secret-for-ci-testing-purposes-only-1234567890'
+      run: |
+        npm run db:migrate
+        npm run db:seed
+        npx playwright test

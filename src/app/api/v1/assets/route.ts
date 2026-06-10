@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { assets, officeAppliances, vehicles, locations } from '@/db/schema';
-import { eq, and, isNull, like, or, sql, SQL } from 'drizzle-orm';
+import { eq, and, isNull, ilike, or, sql, SQL } from 'drizzle-orm';
 
 // GET /api/v1/assets
 export async function GET(request: NextRequest) {
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(assets.status, status));
     }
     if (q) {
-      const nameLike = like(assets.assetName, `%${q}%`);
-      const tagLike = like(assets.assetTagCode, `%${q}%`);
+      const nameLike = ilike(assets.assetName, `%${q}%`);
+      const tagLike = ilike(assets.assetTagCode, `%${q}%`);
       const orCondition = or(nameLike, tagLike);
       if (orCondition) {
         conditions.push(orCondition);
@@ -58,7 +58,8 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     // Format output data nicely
-    const data = records.map((record) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = records.map((record: any) => {
       const { assets: asset, office_appliances: appliance, vehicles: vehicle, locations: location } = record;
       return {
         ...asset,
@@ -255,7 +256,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert using transaction
-    const result = await db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await db.transaction(async (tx: any) => {
       const [newAsset] = await tx
         .insert(assets)
         .values({

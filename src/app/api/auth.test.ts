@@ -24,7 +24,9 @@ describe('Authentication & RBAC Tests', () => {
     it('should successfully authorize user with correct email and password', async () => {
       // Find the Credentials provider from config
       const credentialsProvider = authConfig.providers.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (p: any) => p && typeof p === 'object' && p.id === 'credentials'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ) as any;
 
       assert.ok(credentialsProvider, 'Credentials provider should be defined in config');
@@ -52,7 +54,9 @@ describe('Authentication & RBAC Tests', () => {
 
     it('should return null for incorrect password', async () => {
       const credentialsProvider = authConfig.providers.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (p: any) => p && typeof p === 'object' && p.id === 'credentials'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ) as any;
       const authFn = credentialsProvider.options?.authorize || credentialsProvider.authorize;
 
@@ -73,7 +77,9 @@ describe('Authentication & RBAC Tests', () => {
 
     it('should return null for non-existent email', async () => {
       const credentialsProvider = authConfig.providers.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (p: any) => p && typeof p === 'object' && p.id === 'credentials'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ) as any;
       const authFn = credentialsProvider.options?.authorize || credentialsProvider.authorize;
 
@@ -122,6 +128,7 @@ describe('Authentication & RBAC Tests', () => {
       const token = await jwtCallback({
         token: {},
         user: { id: testUser.id, email: testUser.email, name: testUser.name },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       assert.ok(token);

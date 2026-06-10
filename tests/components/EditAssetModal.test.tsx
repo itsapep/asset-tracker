@@ -4,19 +4,23 @@ import React from 'react';
 
 // Set React 19 dispatcher to mock hooks
 const dispatcher = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useState: (initialValue: any) => {
     return [typeof initialValue === 'function' ? initialValue() : initialValue, () => {}];
   },
   useEffect: () => {},
   useRef: () => ({ current: null }),
   useContext: () => ({}),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useMemo: (fn: any) => fn(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useCallback: (fn: any) => fn,
   useLayoutEffect: () => {},
   useDebugValue: () => {},
 };
 
 function ensureDispatcher() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
   if (internals) {
     internals.H = dispatcher;

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // All status changes require approval unconditionally
-    let requiresApproval = true;
+    const requiresApproval = true;
 
     if (!requiresApproval) {
       // Auto-approve: Update asset status directly
@@ -85,9 +85,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const statusFilter = searchParams.get('status'); // e.g. pending_hrga, pending_finance, approved, rejected
 
-    let query = db
+    const query = db
       .select({
         request: statusChangeRequests,
         asset: assets,
@@ -95,7 +94,10 @@ export async function GET(request: NextRequest) {
       .from(statusChangeRequests)
       .innerJoin(assets, eq(statusChangeRequests.assetId, assets.assetId));
 
-    const results = await query;
+    const results = (await query) as {
+      request: typeof statusChangeRequests.$inferSelect;
+      asset: typeof assets.$inferSelect;
+    }[];
     const mapped = results.map((r) => ({
       ...r.request,
       asset: r.asset,

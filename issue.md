@@ -1,107 +1,197 @@
-# Isolate Database for Tests using PGLite
+# Production Readiness Improvements (Detailed Execution Plan)
 
-This plan outlines how to stop the test suite from wiping the development database by replacing the actual PostgreSQL connection with a lightweight, in-memory WebAssembly PostgreSQL emulator called `PGlite`. This ensures the database is completely mocked out during tests while preserving the exact same behavior and test data logic.
+Based on our `/grill-me` session, we have identified three major areas to improve before deploying the Asset Tracker application to production: **Security**, **Workflow**, and **Deployment Strategy**.
+
+This plan has been specifically formatted with step-by-step instructions, complete code snippets, and exact commands so that a junior programmer or AI agent can execute it without guesswork.
 
 ## User Review Required
-
 > [!IMPORTANT]
-> - This plan requires installing `@electric-sql/pglite` as a dev dependency.
-> - We will modify `src/db/index.ts` to conditionally load an in-memory database when `MOCK_DB=true` is set.
-> - The test command in `package.json` will be updated to automatically inject this environment variable.
-
-## Proposed Changes
-
-### 1. `package.json` Updates
-We will install the required PGLite dependency and update the test script.
-
-#### [MODIFY] package.json
-- **Add Dev Dependency:** Add `"@electric-sql/pglite"` to `devDependencies`.
-- **Modify Script:** Update the `"test"` script to prefix with `MOCK_DB=true`:
-  ```json
-  "test": "MOCK_DB=true npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts src/app/api/v1/status-requests/route.test.ts tests/components/EditAssetModal.test.tsx tests/components/UserDropdown.test.tsx"
-  ```
+> Please review the proposed changes below. Once you approve, I will begin execution and implement these changes.
+> We are replacing the `x-role` header mechanism with real session role checks. If you have external automated systems relying on the `x-role` header to hit the `/api/v1/*` endpoints, they will need to be updated to use valid session tokens or we will need to implement a dedicated API key mechanism.
 
 ---
 
-### 2. Database Module Updates
-We will extract the mock database setup and conditionally load it in the main DB index.
+## 1. Security: Middleware & Authorization
 
-#### [NEW] src/db/mock-db.ts
-Create a new file that initializes the `PGlite` in-memory database and provides a setup function to run your existing Drizzle migrations on it.
-```typescript
-import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
-import { migrate } from 'drizzle-orm/pglite/migrator';
-import * as schema from './schema';
+Currently, `proxy.ts` is ignored by Next.js and the `x-role` header is highly insecure. We will replace it with a proper Next.js middleware using NextAuth's wrapper.
 
-export const client = new PGlite();
-export const db = drizzle(client, { schema });
-
-export async function setupMockDb() {
-  await migrate(db, { migrationsFolder: './src/db/migrations' });
-}
+### Step 1.1: Delete `proxy.ts`
+Run the following command in the terminal to remove the obsolete file:
+```bash
+rm src/proxy.ts
 ```
 
-#### [MODIFY] src/db/index.ts
-Update to optionally use the mock database when the environment variable is present. Using `require` here ensures `PGlite` is not bundled into production Next.js builds.
+### Step 1.2: Create `src/middleware.ts`
+Create the file `src/middleware.ts` and copy-paste the exact code below. This protects all API and dashboard routes by reading the user's role directly from the verified NextAuth session (`req.auth?.user?.roles`) instead of relying on spoofable headers.
+
 ```typescript
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+
+export default auth((req) => {
+  const path = req.nextUrl.pathname;
+  const isLoggedIn = !!req.auth?.user;
+
+  // 1. Route protection: redirect unauthenticated users to /login
+  // Public routes: /login, /favicon.ico, Next.js assets
+  const isPublicRoute = path === '/login' || path.startsWith('/_next') || path === '/favicon.ico';
+
+  if (!isLoggedIn && !isPublicRoute) {
+    const loginUrl = new URL('/login', req.nextUrl.origin);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 2. Role checks on API routes
+  if (path.startsWith('/api/v1')) {
+    // Cast user as any to access custom roles property injected in auth.config.ts
+    const roles: string[] = (req.auth?.user as any)?.roles || [];
+    const method = req.method;
+
+    // Reject users with no roles
+    if (roles.length === 0) {
+      return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User has no assigned roles' } }, { status: 401 });
+    }
+
+    if (roles.includes('reader') && !roles.includes('admin') && !roles.includes('editor') && !roles.includes('finance')) {
+      if (method !== 'GET') {
+         return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Reader role only allows GET requests' } }, { status: 403 });
+      }
+    } else if (roles.includes('editor') && !roles.includes('admin') && !roles.includes('finance')) {
+      const allowedMethods = ['GET', 'POST', 'PATCH', 'PUT'];
+      if (!allowedMethods.includes(method)) {
+         return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Editor role only allows GET, POST, PATCH, PUT' } }, { status: 403 });
+      }
+    }
+    // Admin and Finance are allowed all methods implicitly here
+  }
+
+  return NextResponse.next();
+});
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
+```
+
+---
+
+## 2. Deployment: Database Migrations (Vercel)
+
+To safely push schema changes to the production PostgreSQL database during Vercel deployments, we need a dedicated migration script.
+
+### Step 2.1: Create Migration Script
+Create the file `src/db/migrate.ts` with the following code. This script uses Drizzle's migrator to apply all SQL migrations.
+
+```typescript
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
-import * as schema from './schema';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config({ path: '.env.local' });
 
-let client: any;
-let db: any;
-
-if (process.env.MOCK_DB === 'true') {
-  const mockDb = require('./mock-db');
-  client = mockDb.client;
-  db = mockDb.db;
-} else {
+async function runMigrations() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error('DATABASE_URL is not set in environment variables');
   }
-  client = postgres(connectionString);
-  db = drizzle(client, { schema });
+
+  // Use max 1 connection for migrations
+  const migrationClient = postgres(connectionString, { max: 1 });
+  const db = drizzle(migrationClient);
+
+  console.log('Running database migrations...');
+  
+  await migrate(db, {
+    migrationsFolder: path.join(process.cwd(), 'src/db/migrations'),
+  });
+
+  console.log('Migrations completed successfully!');
+  await migrationClient.end();
+  process.exit(0);
 }
 
-export { client, db };
+runMigrations().catch((err) => {
+  console.error('Migration failed:', err);
+  process.exit(1);
+});
+```
+
+### Step 2.2: Update `package.json`
+Edit `package.json` to add the `db:migrate` script and update the `build` script to automatically run migrations before Next.js builds.
+
+Apply this diff to the `scripts` object in `package.json`:
+```diff
+   "scripts": {
+     "dev": "next dev",
+-    "build": "next build",
++    "build": "npm run db:migrate && next build",
+     "start": "next start",
+     "lint": "eslint",
+     "db:seed": "npx tsx src/db/seed.ts",
++    "db:migrate": "npx tsx src/db/migrate.ts",
+     "test": "MOCK_DB=true npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts src/app/api/v1/status-requests/route.test.ts tests/components/EditAssetModal.test.tsx tests/components/UserDropdown.test.tsx"
+   },
 ```
 
 ---
 
-### 3. Test Helper Update
-We need to ensure the mock database is fully migrated before we try to insert test data.
+## 3. Workflow: CI/CD Pipeline (GitHub Actions)
 
-#### [MODIFY] src/db/test-helper.ts
-Update the `resetDatabase` function to run migrations once before clearing tables.
-```typescript
-import { db } from './index';
-// Import all existing schema definitions
-// ... (keep existing schema imports)
+We need an automated pipeline to run linting, type-checking, unit tests, and Playwright tests before code is merged or deployed.
 
-let isMigrated = false;
+### Step 3.1: Create GitHub Actions Workflow File
+Create the directory structure `.github/workflows/` and then create a file inside named `ci.yml`. Add the following YAML content.
 
-export async function resetDatabase() {
-  if (process.env.MOCK_DB === 'true' && !isMigrated) {
-    const { setupMockDb } = require('./mock-db');
-    await setupMockDb();
-    isMigrated = true;
-  }
-
-  // ... (keep existing clean tables and test data insertion code)
-}
+```bash
+mkdir -p .github/workflows
 ```
 
-## Verification Plan
+Create `.github/workflows/ci.yml`:
+```yaml
+name: CI Pipeline
 
-### Automated Tests
-- Run `npm test` after implementing the changes.
-- Verify that all tests pass without errors.
-- Verify that the development PostgreSQL database remains untouched and its data is not wiped out.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-### Manual Verification
-- Check the local development site to ensure normal operations (e.g. `npm run dev`) still connect properly to the actual PostgreSQL database without issue.
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: TypeScript Compile Check
+      run: npx tsc --noEmit
+      
+    - name: ESLint Check
+      run: npm run lint
+      
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+      
+    - name: Run Unit Tests
+      run: npm run test
+      
+    - name: Run Playwright E2E Tests
+      run: npx playwright test
+```
+
+## Final Verification
+1. Run `npm run test` locally to ensure our mock database setup is unaffected by the `package.json` script updates.
+2. Verify API routes enforce the 401 Unauthorized status code without a valid NextAuth session.
+3. Test a production build locally with `npm run build` and ensure `drizzle-orm` successfully runs the `src/db/migrate.ts` script.

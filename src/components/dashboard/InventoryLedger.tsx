@@ -35,6 +35,16 @@ export default function InventoryLedger() {
   const type = searchParams.get("type") || "";
   const page = searchParams.get("page") || "1";
 
+  const [searchValue, setSearchValue] = useState(q);
+  const [prevQ, setPrevQ] = useState(q);
+
+  // Sync the local search input state with the URL query parameter
+  // so that clearing filters resets the input field.
+  if (q !== prevQ) {
+    setSearchValue(q);
+    setPrevQ(q);
+  }
+
   // Build query string
   const queryParams = new URLSearchParams();
   queryParams.set("page", page);
@@ -120,7 +130,8 @@ export default function InventoryLedger() {
             <input
               type="text"
               name="search"
-              defaultValue={q}
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search by name or tag code..."
               className="w-full pl-10 pr-4 py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 transition-colors"
             />
