@@ -107,6 +107,7 @@ export default function StatusChangeModal({ isOpen, onClose, asset, onSuccess }:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
+      toast.dismiss('upload-toast');
       toast.error(err.message || 'An error occurred during submission.');
     } finally {
       setIsSubmitting(false);
