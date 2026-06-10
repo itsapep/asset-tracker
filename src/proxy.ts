@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const proxy = auth((req: any) => {
   const path = req.nextUrl.pathname;
   const isLoggedIn = !!req.auth?.user;
@@ -20,6 +21,7 @@ export const proxy = auth((req: any) => {
   // 2. Role checks on API routes
   if (path.startsWith('/api/v1')) {
     // Cast user as any to access custom roles property injected in auth.config.ts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const roles: string[] = (req.auth?.user as any)?.roles || [];
     const method = req.method;
 

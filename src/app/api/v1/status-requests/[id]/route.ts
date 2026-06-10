@@ -72,6 +72,7 @@ export async function PATCH(
         let updatedRequest;
 
         if (skipFinance) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await db.transaction(async (tx: any) => {
             [updatedRequest] = await tx
               .update(statusChangeRequests)
@@ -139,6 +140,7 @@ export async function PATCH(
 
       if (action === 'approve') {
         let updatedRequest;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await db.transaction(async (tx: any) => {
           [updatedRequest] = await tx
             .update(statusChangeRequests)

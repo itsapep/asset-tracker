@@ -20,10 +20,10 @@ export default async function PrintTagsPage(props: Props) {
         conditions.push(eq(assets.status, params.status as "active" | "idle" | "under_maintenance" | "disposed"));
     }
 
-    const matchingAssets = await db.select().from(assets).where(and(...conditions));
+    const matchingAssets = (await db.select().from(assets).where(and(...conditions))) as (typeof assets.$inferSelect)[];
 
     const assetsWithQRCodes = await Promise.all(
-        matchingAssets.map(async (asset: any) => {
+        matchingAssets.map(async (asset) => {
             const qrCodeSvg = await generateAssetQRCode(asset.assetTagCode);
             return {
                 ...asset,
