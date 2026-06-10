@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx src/db/seed.ts",
-    "test": "npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts src/app/api/v1/status-requests/route.test.ts tests/components/EditAssetModal.test.tsx tests/components/UserDropdown.test.tsx"
+    "test": "MOCK_DB=true npx tsx --test --test-concurrency=1 src/app/api/api.test.ts src/app/api/auth.test.ts src/app/api/v1/status-requests/route.test.ts tests/components/EditAssetModal.test.tsx tests/components/UserDropdown.test.tsx"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
@@ -26,6 +26,7 @@
     "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
