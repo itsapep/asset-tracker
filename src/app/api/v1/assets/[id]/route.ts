@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { assets, locations, costCenters, vehicles, officeAppliances } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { assets, locations, costCenters, vehicles, officeAppliances, statusChangeRequests } from '@/db/schema';
+import { eq, and, or } from 'drizzle-orm';
 
 // GET /api/v1/assets/[id]
 export async function GET(
@@ -47,7 +47,24 @@ export async function GET(
       details = appliance;
     }
 
-    // 3. Return aggregated object
+    // 3. Check for any pending status requests
+    const pendingRequests = await db
+      .select({ id: statusChangeRequests.requestId })
+      .from(statusChangeRequests)
+      .where(
+        and(
+          eq(statusChangeRequests.assetId, id),
+          or(
+            eq(statusChangeRequests.approvalStatus, 'pending_hrga'),
+            eq(statusChangeRequests.approvalStatus, 'pending_finance')
+          )
+        )
+      )
+      .limit(1);
+
+    const hasPendingRequest = pendingRequests.length > 0;
+
+    // 4. Return aggregated object
     return NextResponse.json({
       success: true,
       data: {
@@ -55,6 +72,7 @@ export async function GET(
         location: assetRecord.location,
         costCenter: assetRecord.costCenter,
         details,
+        hasPendingRequest,
       },
     });
   } catch (error) {

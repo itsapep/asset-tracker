@@ -312,10 +312,11 @@ function AssetDetailsDrawerContent() {
           <div className="flex gap-3">
             <button 
               onClick={() => setIsStatusModalOpen(true)}
-              disabled={asset?.status === 'disposed'}
-              className="flex-1 py-2 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50"
+              disabled={asset?.status === 'disposed' || asset?.hasPendingRequest}
+              title={asset?.hasPendingRequest ? "There is already a pending status request for this asset" : ""}
+              className="flex-1 py-2 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Request Status
+              {asset?.hasPendingRequest ? 'Status Pending' : 'Request Status'}
             </button>
             <button 
               onClick={() => setIsEditModalOpen(true)}
