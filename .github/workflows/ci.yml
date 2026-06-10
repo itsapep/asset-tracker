@@ -9,7 +9,21 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -37,5 +51,8 @@ jobs:
       
     - name: Run Playwright E2E Tests
       env:
-        MOCK_DB: 'true'
-      run: npx playwright test
+        DATABASE_URL: 'postgres://user:password@localhost:5432/db'
+      run: |
+        npm run db:migrate
+        npm run db:seed
+        npx playwright test
