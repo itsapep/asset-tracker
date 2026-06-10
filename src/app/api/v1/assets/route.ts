@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { assets, officeAppliances, vehicles, locations } from '@/db/schema';
-import { eq, and, isNull, like, or, sql, SQL } from 'drizzle-orm';
+import { eq, and, isNull, ilike, or, sql, SQL } from 'drizzle-orm';
 
 // GET /api/v1/assets
 export async function GET(request: NextRequest) {
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(assets.status, status));
     }
     if (q) {
-      const nameLike = like(assets.assetName, `%${q}%`);
-      const tagLike = like(assets.assetTagCode, `%${q}%`);
+      const nameLike = ilike(assets.assetName, `%${q}%`);
+      const tagLike = ilike(assets.assetTagCode, `%${q}%`);
       const orCondition = or(nameLike, tagLike);
       if (orCondition) {
         conditions.push(orCondition);
