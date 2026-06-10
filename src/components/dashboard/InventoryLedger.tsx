@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { 
@@ -36,12 +36,14 @@ export default function InventoryLedger() {
   const page = searchParams.get("page") || "1";
 
   const [searchValue, setSearchValue] = useState(q);
-  
+  const [prevQ, setPrevQ] = useState(q);
+
   // Sync the local search input state with the URL query parameter
   // so that clearing filters resets the input field.
-  useEffect(() => {
+  if (q !== prevQ) {
     setSearchValue(q);
-  }, [q]);
+    setPrevQ(q);
+  }
 
   // Build query string
   const queryParams = new URLSearchParams();
