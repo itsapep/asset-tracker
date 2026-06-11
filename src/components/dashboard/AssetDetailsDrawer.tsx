@@ -11,11 +11,15 @@ import {
   Building, 
   DollarSign, 
   Calendar, 
-  Clock 
+  Clock,
+  QrCode,
+  Loader2
 } from "lucide-react";
 import EditAssetModal from "./EditAssetModal";
 import StatusChangeModal from "./StatusChangeModal";
 import { usePermissions } from "@/lib/hooks/use-permissions";
+import QRCode from "qrcode";
+
 
 const fetcher = (url: string) => fetch(url, {
   headers: {
@@ -32,8 +36,30 @@ function AssetDetailsDrawerContent() {
   const assetId = searchParams.get("assetId");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const { hasRole } = usePermissions();
   const isFinanceOnly = hasRole('Finance') && !hasRole('System Admin');
+
+  const handleDownloadQR = async () => {
+    if (!asset) return;
+    setIsGeneratingQR(true);
+    try {
+      const url = `${window.location.origin}${pathname}?assetId=${asset.assetId}`;
+      const dataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2 });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `asset-${asset.assetTagCode || asset.assetId}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Failed to generate QR code", err);
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+
 
   const { data: response, error, isLoading } = useSWR<{
     success: boolean;
@@ -102,12 +128,29 @@ function AssetDetailsDrawerContent() {
               {asset?.assetName || "Asset Details"}
             </h3>
           </div>
-          <button 
-            onClick={closeDrawer}
-            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {asset && (
+              <button
+                onClick={handleDownloadQR}
+                disabled={isGeneratingQR}
+                title="Download QR Code"
+                className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                {isGeneratingQR ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <QrCode className="w-5 h-5" />
+                )}
+              </button>
+            )}
+            <button 
+              onClick={closeDrawer}
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
         </div>
 
         {/* Scrollable Content */}
